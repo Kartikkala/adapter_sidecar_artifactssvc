@@ -13,13 +13,14 @@ type Service struct {
 }
 
 type PolicyManager struct {
-	storageSvcHostname string
-	accessKey          string
-	port               uint16
-	mu                 sync.RWMutex
-	policies           map[string]*UploadPolicy
+	storageSvcHostname       string
+	storageSvcAccessKey      string
+	storageSvcPort           uint16
+	storageSvcPolicyEndpoint string
+	mu                       sync.RWMutex
+	policies                 map[string]*UploadPolicy
 }
 
 type Handler struct {
-	svc Service
+	svc *Service
 }

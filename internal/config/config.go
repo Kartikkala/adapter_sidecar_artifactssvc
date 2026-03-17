@@ -1,9 +1,10 @@
 package config
 
 type StorageServerConfig struct {
-	AccessKey string
-	Hostname  string
-	Port      uint16
+	AccessKey         string
+	Hostname          string
+	Port              uint16
+	PolicyGenEndpoint string
 }
 
 type AppConfig struct {
@@ -18,9 +19,10 @@ type Config struct {
 func NewConfig() *Config {
 	return &Config{
 		MainServer: StorageServerConfig{
-			AccessKey: "myAccessKey",
-			Hostname:  "127.0.0.1",
-			Port:      uint16(8080),
+			AccessKey:         "myAccessKey",
+			Hostname:          "127.0.0.1",
+			Port:              uint16(8080),
+			PolicyGenEndpoint: "/internal/policy",
 		},
 		App: AppConfig{
 			Port: uint16(9009),

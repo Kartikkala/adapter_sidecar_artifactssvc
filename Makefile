@@ -3,7 +3,7 @@
 
 build:
 	@echo "Building binary..."
-	@go build -o bin/adapter_sidecar cmd/service/main.go
+	@go build -o bin/adapter_sidecar cmd/main.go
 
 run: build
 	@echo "Running..."

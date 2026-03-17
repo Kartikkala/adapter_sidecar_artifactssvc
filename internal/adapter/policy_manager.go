@@ -9,18 +9,25 @@ import (
 	"strings"
 )
 
-func NewPolicyManager(storageSvcHostname string, storageSvcAccessKey string, storageSvcPort uint16) *PolicyManager {
+func NewPolicyManager(
+	storageSvcHostname,
+	storageSvcAccessKey,
+	storageSvcPolicyEndpoint string,
+	storageSvcPort uint16,
+) *PolicyManager {
+
 	return &PolicyManager{
-		storageSvcHostname: storageSvcHostname,
-		accessKey:          storageSvcAccessKey,
-		port:               storageSvcPort,
-		policies:           make(map[string]*UploadPolicy),
+		storageSvcHostname:       storageSvcHostname,
+		storageSvcAccessKey:      storageSvcAccessKey,
+		storageSvcPort:           storageSvcPort,
+		storageSvcPolicyEndpoint: storageSvcPolicyEndpoint,
+		policies:                 make(map[string]*UploadPolicy),
 	}
 }
 
-func (pm *PolicyManager) GetPolicy(ctx context.Context, nodeID string) (*UploadPolicy, error) {
+func (pm *PolicyManager) GetPolicy(ctx context.Context, jobID string) (*UploadPolicy, error) {
 	pm.mu.RLock()
-	policy, exists := pm.policies[nodeID]
+	policy, exists := pm.policies[jobID]
 	pm.mu.RUnlock()
 
 	// If policy is in store, return it
@@ -28,27 +35,26 @@ func (pm *PolicyManager) GetPolicy(ctx context.Context, nodeID string) (*UploadP
 		return policy, nil
 	}
 
-	// CACHE MISS : We need to fetch a new one
 	// Acquire a Write Lock so other concurrent ffmpeg requests wait
 	// while we fetch the new policy instead of spamming Spring Boot.
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
 	// Double-check inside the lock in case another goroutine JUST fetched it
-	policy, exists = pm.policies[nodeID]
+	policy, exists = pm.policies[jobID]
 	if exists {
 		return policy, nil
 	}
 
-	log.Printf("Fetching fresh MinIO policy for folder: %s\n", nodeID)
+	log.Printf("Fetching fresh MinIO policy for job ID: %s\n", jobID)
 
-	policy, err := fetchUploadPolicy(ctx, pm.storageSvcHostname, "/endpoint", pm.port, pm.accessKey, false)
+	policy, err := fetchUploadPolicy(ctx, pm.storageSvcHostname, pm.storageSvcPolicyEndpoint, pm.storageSvcPort, pm.storageSvcAccessKey, false)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch policy: %w", err)
 	}
 
-	pm.policies[nodeID] = policy
+	pm.policies[jobID] = policy
 	return policy, nil
 }
 
