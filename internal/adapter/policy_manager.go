@@ -6,7 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
+)
+
+var HOSTNAME_REGEX = regexp.MustCompile(
+	`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$`,
 )
 
 func NewPolicyManager(
@@ -67,25 +73,34 @@ func fetchUploadPolicy(
 	https bool,
 ) (*UploadPolicy, error) {
 	protocol := "http"
-	URL := ""
 	if https {
 		protocol = protocol + "s"
 	}
 
 	newPolicyGenerationEndpoint, _ := strings.CutPrefix(policyGenerationEndpoint, "/")
 
-	URL += fmt.Sprintf(
-		"%s://%s:%v/%s",
-		protocol,
-		storageSvcHostname,
-		storageSvcPort,
-		newPolicyGenerationEndpoint,
-	)
-	res, err := http.Get(URL)
+	if !HOSTNAME_REGEX.Match([]byte(storageSvcHostname)) {
+		return nil, fmt.Errorf("error: invalid hostname")
+	}
+
+	u := url.URL{
+		Scheme: protocol,
+		Host:   fmt.Sprintf("%s:%d", storageSvcHostname, storageSvcPort),
+		Path:   newPolicyGenerationEndpoint,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 
 	if err != nil {
 		return nil, err
 	}
+
+	res, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+	
 	var policyData UploadPolicy
 
 	defer res.Body.Close()
