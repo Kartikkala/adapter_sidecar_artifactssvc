@@ -20,15 +20,17 @@ func NewPolicyManager(
 	storageSvcAccessKey,
 	storageSvcPolicyEndpoint string,
 	storageSvcPort uint16,
-) *PolicyManager {
-
+) (*PolicyManager, error) {
+	if !HOSTNAME_REGEX.Match([]byte(storageSvcHostname)) {
+		return nil, fmt.Errorf("invalid hostname: %s", storageSvcHostname)
+	}
 	return &PolicyManager{
 		storageSvcHostname:       storageSvcHostname,
 		storageSvcAccessKey:      storageSvcAccessKey,
 		storageSvcPort:           storageSvcPort,
 		storageSvcPolicyEndpoint: storageSvcPolicyEndpoint,
 		policies:                 make(map[string]*UploadPolicy),
-	}
+	}, nil
 }
 
 func (pm *PolicyManager) GetPolicy(ctx context.Context, jobID string) (*UploadPolicy, error) {
@@ -79,10 +81,6 @@ func fetchUploadPolicy(
 
 	newPolicyGenerationEndpoint, _ := strings.CutPrefix(policyGenerationEndpoint, "/")
 
-	if !HOSTNAME_REGEX.Match([]byte(storageSvcHostname)) {
-		return nil, fmt.Errorf("error: invalid hostname")
-	}
-
 	u := url.URL{
 		Scheme: protocol,
 		Host:   fmt.Sprintf("%s:%d", storageSvcHostname, storageSvcPort),
@@ -100,7 +98,7 @@ func fetchUploadPolicy(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var policyData UploadPolicy
 
 	defer res.Body.Close()

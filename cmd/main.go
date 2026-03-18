@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirkartik/adapter_sidecar/internal/adapter"
@@ -12,13 +13,16 @@ func main() {
 	e := echo.New()
 
 	cfg := config.NewConfig()
-	adapterSvc := adapter.NewService(
+	adapterSvc, err := adapter.NewService(
 		cfg.MainServer.AccessKey,
 		cfg.MainServer.Hostname,
 		cfg.MainServer.PolicyGenEndpoint,
 		cfg.MainServer.Port,
 	)
 
+	if err != nil {
+		log.Fatal(err)
+	}
 	adapter.AttachRoutes(e, adapterSvc)
 	if err := e.Start(fmt.Sprintf("127.0.0.1:%d", cfg.App.Port)); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

@@ -15,10 +15,15 @@ func NewService(
 	storageSvcHostname,
 	storageSvcPolicyEndpoint string,
 	storageSvcPort uint16,
-) *Service {
-	return &Service{
-		pm: NewPolicyManager(storageSvcHostname, storageSvcAccessKey, storageSvcPolicyEndpoint, storageSvcPort),
+) (*Service, error) {
+	pm, err := NewPolicyManager(storageSvcHostname, storageSvcAccessKey, storageSvcPolicyEndpoint, storageSvcPort)
+
+	if err != nil {
+		return nil, err
 	}
+	return &Service{
+		pm: pm,
+	}, nil
 }
 
 func (svc *Service) MakePostRequest(
