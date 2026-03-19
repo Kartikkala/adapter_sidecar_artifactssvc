@@ -17,7 +17,6 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) PutToPost(
 	c echo.Context,
 ) error {
-	log.Println("ooooh I was fired babyyy!")
 	filepath := c.Param("*")
 
 	if filepath == "" {
@@ -37,6 +36,19 @@ func (h *Handler) PutToPost(
 	err := h.svc.MakePostRequest(c.Request().Context(), jobID, actualPath, filestream)
 	if err != nil {
 		log.Println(err)
+
+		conn, _, hijackErr := c.Response().Hijack()
+		if hijackErr == nil {
+			// Force close connection instead of
+			// sending 500 response because
+			// ffmpeg ignores 500 response
+			// However, throws broken pipe error
+			// if we force close the connection
+			conn.Close()
+			return nil
+		}
+
+		return err
 	}
-	return err
+	return c.NoContent(http.StatusAccepted)
 }

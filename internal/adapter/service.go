@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"time"
 )
 
 func NewService(
@@ -68,15 +69,26 @@ func (svc *Service) MakePostRequest(
 		return fmt.Errorf("failed to close multipart writer: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, policy.URL, &bodyBuf)
+	ctxWithoutCancel := context.WithoutCancel(ctx)
+	req, err := http.NewRequestWithContext(ctxWithoutCancel, http.MethodPost, policy.URL, &bodyBuf)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
+	var resp *http.Response
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	for i := 0; i < 5; i++ {
+		resp, err = client.Do(req)
+		if err != nil {
+			log.Printf("error in minio upload. Tries (%d)\n", i+1)
+			time.Sleep(time.Duration(i) * time.Second)
+		} else {
+			err = nil
+			break
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("minio request failed: %w", err)
 	}
